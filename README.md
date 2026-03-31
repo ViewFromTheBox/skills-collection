@@ -36,6 +36,12 @@ Each skill lives in its own folder with a `SKILL.md` file containing:
 | [prepare-merge-request](skills/prepare-merge-request/) | Lints, tests, checks docs, and opens a draft MR (GitHub & GitLab) |
 | [prepare-release](skills/prepare-release/) | Prepares a release branch: lint, test, verify docs, audit deps, create release PR/MR |
 
+### Git Maintenance
+
+| Skill | Description |
+| --- | --- |
+| [prune-branches](skills/prune-branches/) | Prunes local git branches that have no remote tracking branch and are not in active development |
+
 ### CI/CD & Pipelines
 
 | Skill | Description |
@@ -118,7 +124,7 @@ skills-collection/
     │   └── SKILL.md
     ├── work-issue/
     │   └── SKILL.md
-    └── ... (18 skills total)
+    └── ... (19 skills total)
 ```
 
 Each skill is self-contained in its own folder. Some skills may include additional supporting files alongside `SKILL.md`.
