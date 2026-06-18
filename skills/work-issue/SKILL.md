@@ -200,36 +200,28 @@ Pause and ask the user to manually test the implementation before proceeding wit
 
 3. **Do NOT proceed** to the next step until the user explicitly confirms the feature or fix is working.
 
-## Step 9: CodeRabbit Review Loop
+## Step 9: Local Review Loop
 
-Run the CodeRabbit CLI to get review feedback and iteratively clean up the code before committing.
+Run the `/review` skill against the uncommitted diff (vs. `{base_branch}`) to get review feedback and iteratively clean up the code before committing.
 
-1. **Check that the `cr` CLI is available**:
-   ```bash
-   which cr
-   ```
-   If not installed, warn the user and skip this step.
+1. **Invoke the `/review` skill**. The skill expects a PR number, but at this stage no PR exists yet — instead, gather the same inputs locally and have the reviewer analyze them:
+   - Capture the diff: `git diff {base_branch}..HEAD` (committed changes) + `git diff` (uncommitted) + `git status --short` (new files).
+   - Run the review reasoning yourself using the same rubric the `/review` skill applies: correctness, project conventions, performance, test coverage, security. Focus on the changes against `{base_branch}`.
+   - Where `/review` would call `gh pr diff <number>`, use the local diff against `{base_branch}` instead.
 
-2. **Run CodeRabbit review** using the `--prompt-only` flag against the base branch:
-   ```bash
-   cr review --base {base_branch} --prompt-only
-   ```
-   - `{base_branch}` is the branch recorded in Step 4 (the branch you were on before creating the new branch).
+2. **Analyze the feedback**: Apply any valid findings — fix correctness issues, naming problems, missing edge cases, missing tests, etc. Skip findings that are wrong, off-topic, or violate `.claude/rules/` — but note why in your turn output.
 
-3. **Analyze the feedback**: Read the CodeRabbit output and apply any valid suggestions — fix code quality issues, naming problems, missing edge cases, etc.
+3. **Re-review after fixes** by re-running the same local-diff analysis.
 
-4. **Re-run CodeRabbit** after applying fixes:
-   ```bash
-   cr review --base {base_branch} --prompt-only
-   ```
+4. **Repeat up to 3 passes total**. Stop iterating when:
+   - The review surfaces no actionable feedback, OR
+   - You've completed 3 review passes.
 
-5. **Repeat up to 3 times total**. Stop iterating when:
-   - CodeRabbit returns no actionable feedback, OR
-   - You've completed 3 review passes
-
-6. **Re-run tests** after applying CodeRabbit suggestions to ensure nothing was broken:
+5. **Re-run tests** after applying review suggestions to ensure nothing was broken:
    - If tests fail, fix the issues (following the same retry logic from Step 7).
    - Do NOT proceed if tests are failing.
+
+> **Why not the CodeRabbit CLI here?** The `cr` CLI is slow, flaky, and surfaces low-signal nits at the pre-PR stage when iteration speed matters most. The `/review` skill (or equivalent local analysis) is faster, runs in the same process, and produces higher-signal feedback you can act on immediately. CodeRabbit still runs automatically on the PR/MR after Step 11 (see Step 12), so its feedback is not lost — just deferred to where it's most useful.
 
 ## Step 10: Commit and Push
 
@@ -314,7 +306,25 @@ Closes #{issue_number}
 All tests passing.
 ```
 
-## Step 12: Report Result
+## Step 12: PR/MR Review Pass
+
+Run a final review pass against the open PR/MR using the `/review` skill, then proceed to Step 13.
+
+1. **Invoke the `/review` skill with the PR/MR number**:
+   - **GitHub**: `/review {pr_number}` — the skill fetches PR metadata and diff via `gh pr view` + `gh pr diff` and produces a structured review.
+   - **GitLab**: `/review {mr_number}` — same flow via `glab mr view` + `glab mr diff`.
+
+2. **Address actionable findings**:
+   - Apply valid findings — fix correctness issues, missing edge cases, missing tests, etc.
+   - Skip findings that are wrong, off-topic, or violate `.claude/rules/` — but note why in your turn output.
+   - Re-run tests after edits (Step 7 logic). Do not push if tests fail.
+   - Commit with a clear message (e.g. `chore: address review feedback`) and push to the same branch.
+
+3. **Re-run `/review`** after the push. Repeat until the review surfaces no actionable feedback, OR up to 3 passes total. If still receiving actionable feedback after 3 passes, stop and report the open items to the user for manual triage.
+
+> **Why not poll CodeRabbit here?** CodeRabbit runs automatically on every PR/MR creation and push, so its feedback still lands — but polling for it adds 1–3 minutes of dead time per pass and the agent process is brittle (timeouts, transient API failures, low-signal nits). The `/review` skill is synchronous, in-process, and produces higher-signal feedback you can act on immediately. CodeRabbit's automatic comments are still available for human review on the PR; address them in a follow-up commit if any are valid and you didn't already cover them via `/review`.
+
+## Step 13: Report Result
 
 After the draft PR/MR is created, report:
 
